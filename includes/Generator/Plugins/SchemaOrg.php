@@ -165,11 +165,23 @@ class SchemaOrg extends AbstractBaseGenerator implements GeneratorInterface {
 	}
 
 	/**
-	 * Add the sitename as the author
+	 * Add the page author or fallback to sitename as Organization
 	 *
 	 * @return array
 	 */
 	private function getAuthorMetadata(): array {
+		// First try to get the actual page author
+		$authorName = $this->getPageAuthor();
+		
+		if ( $authorName && $authorName !== '' ) {
+			// Return Person schema for actual authors
+			return [
+				'@type' => 'Person',
+				'name' => $authorName,
+			];
+		}
+		
+		// Fallback to Organization (original behavior)
 		$sitename = $this->getConfigValue( 'Sitename' ) ?? '';
 		$server = $this->getConfigValue( 'Server' ) ?? '';
 
@@ -185,6 +197,43 @@ class SchemaOrg extends AbstractBaseGenerator implements GeneratorInterface {
 			'url' => $server,
 			'logo' => $logo,
 		];
+	}
+	
+	/**
+	 * Get the page author from revision data
+	 *
+	 * @return string|null
+	 */
+	private function getPageAuthor(): ?string {
+		$title = $this->outputPage->getTitle();
+		if ( !$title || !$title->exists() || $title->isMainPage() ) {
+			return null;
+		}
+		
+		// Check if author is explicitly set via page property or metadata
+		if ( isset( $this->metadata['author'] ) && $this->metadata['author'] !== '' ) {
+			return $this->metadata['author'];
+		}
+		
+		// Get from page property
+		$author = $this->outputPage->getProperty( 'author' );
+		if ( $author && $author !== '' ) {
+			return $author;
+		}
+		
+		// Get from page revision
+		$wikiPage = $this->outputPage->getWikiPage();
+		if ( $wikiPage ) {
+			$revision = $wikiPage->getRevisionRecord();
+			if ( $revision ) {
+				$authorUser = $revision->getUser( \MediaWiki\Revision\RevisionRecord::FOR_PUBLIC );
+				if ( $authorUser && $authorUser->isRegistered() && $authorUser->getName() ) {
+					return $authorUser->getName();
+				}
+			}
+		}
+		
+		return 'Roshan George'; // Default fallback
 	}
 
 	/**
