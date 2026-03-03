@@ -221,15 +221,14 @@ class SchemaOrg extends AbstractBaseGenerator implements GeneratorInterface {
 			return $author;
 		}
 		
-		// Get from page revision
-		$wikiPage = $this->outputPage->getWikiPage();
-		if ( $wikiPage ) {
-			$revision = $wikiPage->getRevisionRecord();
-			if ( $revision ) {
-				$authorUser = $revision->getUser( \MediaWiki\Revision\RevisionRecord::FOR_PUBLIC );
-				if ( $authorUser && $authorUser->isRegistered() && $authorUser->getName() ) {
-					return $authorUser->getName();
-				}
+		// Get from first revision (original page creator)
+		$title = $this->outputPage->getTitle();
+		$revisionStore = \MediaWiki\MediaWikiServices::getInstance()->getRevisionStore();
+		$firstRevision = $revisionStore->getFirstRevision( $title );
+		if ( $firstRevision ) {
+			$authorUser = $firstRevision->getUser( \MediaWiki\Revision\RevisionRecord::FOR_PUBLIC );
+			if ( $authorUser && $authorUser->isRegistered() && $authorUser->getName() ) {
+				return $authorUser->getName();
 			}
 		}
 		
